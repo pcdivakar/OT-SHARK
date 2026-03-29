@@ -52,7 +52,7 @@ st.markdown("""
     }
     .stTabs [data-baseweb="tab"] {
         background-color: transparent;
-        color: #e0e0e0 !important;
+        color: #e0e0e1 !important;
         font-weight: bold;
         font-size: 16px;
         border-radius: 8px;
