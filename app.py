@@ -20,7 +20,7 @@ from collections import defaultdict
 # =============================================================================
 # PAGE CONFIG & DELOITTE DARK THEME (BLACK + GREEN)
 # =============================================================================
-st.set_page_config(page_title="Deloitte OT/IT Asset Discovery", layout="wide", page_icon="🔒")
+st.set_page_config(page_title="OT/IT Asset Discovery & Mapping", layout="wide", page_icon="🔒")
 
 # Custom CSS for complete Deloitte black & green theme (improved visibility)
 st.markdown("""
