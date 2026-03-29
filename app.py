@@ -177,7 +177,7 @@ try:
 except:
     pass
 
-st.title("🔒 Deloitte OT & IT Asset Discovery")
+st.title("OT Shark Asset Mapper")
 st.markdown("*Professional network mapping for industrial control systems*")
 
 # =============================================================================
