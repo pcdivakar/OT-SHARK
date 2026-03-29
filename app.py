@@ -27,7 +27,7 @@ st.markdown("""
 <style>
     /* Global background */
     .stApp {
-        background-color: #0a0a0a !important;
+        background-color: #D3D3D3 !important;
     }
     /* All text – ensure visibility */
     body, p, div, span, label, .stText, .stMarkdown, .stAlert, .stException,
