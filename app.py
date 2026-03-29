@@ -91,7 +91,7 @@ st.markdown("""
         color: #00ff9d !important;
     }
     .stMetric .stMetricValue {
-        color: #ffffff !important;
+        color: #FFD580 !important;
         font-size: 28px !important;
         font-weight: bold;
     }
