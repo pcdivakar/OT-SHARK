@@ -449,7 +449,7 @@ def generate_vis_network(nodes_data, edges_data):
                 }},
                 edges: {{
                     smooth: {{type: 'continuous', roundness: 0.5}},
-                    color: {{color: '#00ff9d', highlight: '#ffffff'}},
+                    color: {{color: '#00ff9d', highlight: '#D3D3D3'}},
                     width: 2,
                     arrows: {{to: {{enabled: false}}}}
                 }},
