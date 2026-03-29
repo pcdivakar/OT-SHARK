@@ -1,12 +1,3 @@
-"""
-OT & IT Asset Discovery – Deloitte Black & Green Theme
-- Exhaustive asset identification (OT + IT) using tshark
-- MAC OUI vendor lookup
-- Professional vis-network topology (draggable, zoomable, full-screen)
-- Tabs at the top (Asset Inventory / Network Map)
-- Fully optimised for dark background readability
-"""
-
 import streamlit as st
 import subprocess
 import tempfile
@@ -14,7 +5,7 @@ import os
 import re
 import pandas as pd
 import json
-import networkx as nx          # <-- FIXED: added missing import
+import networkx as nx       
 from collections import defaultdict
 
 # =============================================================================
@@ -25,148 +16,161 @@ st.set_page_config(page_title="OT/IT Asset Discovery & Mapping", layout="wide", 
 # Custom CSS for complete Deloitte black & green theme (improved visibility)
 st.markdown("""
 <style>
-    /* Global background */
+    /* Global background - Pure dark mode instead of that maroon red */
     .stApp {
-        background-color: #800000 !important;
+        background-color: #0A0A0A !important;
     }
-    /* All text – ensure visibility */
+    
+    /* All text – pure high-contrast visibility */
     body, p, div, span, label, .stText, .stMarkdown, .stAlert, .stException,
     .stCodeBlock, code, pre, .stExpander, .stExpander p, .stExpander div {
-        color: #e0e0e0 !important;
+        color: #E0E0E0 !important;
     }
-    /* Headers */
+    
+    /* Headers - Electric Deloitte Green */
     h1, h2, h3, h4, h5, h6, .stHeader {
-        color: #00ff9d !important;
+        color: #00FF9D !important;
         font-weight: 600 !important;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
+    
     /* Sidebar */
     .css-1d391kg, .stSidebar {
         background-color: #000000 !important;
+        border-right: 1px solid #1A1A1A;
     }
+    
     /* Tabs at top */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 24px;
-        background-color: #1a1a1a;
-        padding: 10px 20px;
+        gap: 12px;
+        background-color: #141414;
+        padding: 8px;
         border-radius: 8px;
+        border: 1px solid #262626;
     }
     .stTabs [data-baseweb="tab"] {
         background-color: transparent;
-        color: #e0e0e1 !important;
+        color: #888888 !important;
         font-weight: bold;
-        font-size: 16px;
-        border-radius: 8px;
+        font-size: 15px;
+        border-radius: 6px;
         padding: 8px 16px;
+        transition: all 0.2s ease;
+    }
+    .stTabs [data-baseweb="tab"]:hover {
+        color: #00FF9D !important;
     }
     .stTabs [aria-selected="true"] {
-        background-color: #00ff9d !important;
+        background-color: #00FF9D !important;
         color: #000000 !important;
     }
-    /* Dataframe */
+    
+    /* Dataframe & Tables */
     .dataframe, .stDataFrame {
-        background-color: #1e1e1e !important;
-        color: #e0e0e0 !important;
+        background-color: #141414 !important;
+        color: #E0E0E0 !important;
         border-collapse: collapse;
         width: 100%;
     }
     .dataframe th, .stDataFrame th {
-        background-color: #2a2a2a !important;
-        color: #00ff9d !important;
-        border: 1px solid #333;
-        padding: 8px;
+        background-color: #1E1E1E !important;
+        color: #00FF9D !important;
+        border: 1px solid #262626;
+        padding: 10px;
     }
     .dataframe td, .stDataFrame td {
-        border: 1px solid #333;
+        border: 1px solid #262626;
         padding: 8px;
-        color: #e0e0e0;
+        color: #E0E0E0;
     }
+    
     /* Metric boxes */
     .stMetric {
-        background-color: #1a1a1a !important;
+        background-color: #141414 !important;
         border-radius: 8px;
-        padding: 10px;
-        border-left: 4px solid #00ff9d;
+        padding: 15px;
+        border: 1px solid #262626;
+        border-left: 4px solid #00FF9D !important;
     }
     .stMetric label, .stMetric .stMetricLabel {
-        color: #00ff9d !important;
+        color: #888888 !important;
+        font-size: 14px !important;
     }
     .stMetric .stMetricValue {
-        color: #FFD580 !important;
-        font-size: 28px !important;
+        color: #00FF9D !important;
+        font-size: 32px !important;
         font-weight: bold;
+        font-family: monospace;
     }
+    
     /* Expander */
     .streamlit-expanderHeader {
-        background-color: #1a1a1a !important;
-        color: #00ff9d !important;
+        background-color: #141414 !important;
+        color: #00FF9D !important;
+        border: 1px solid #262626;
         border-radius: 8px;
     }
     .streamlit-expanderContent {
-        background-color: #0a0a0a !important;
-        color: #e0e0e0 !important;
+        background-color: #0D0D0D !important;
+        color: #E0E0E0 !important;
+        border: 1px solid #262626;
+        border-top: none;
     }
+    
     /* Info / Success / Warning boxes */
     .stAlert {
-        background-color: #1a1a1a !important;
-        border-left: 4px solid #00ff9d !important;
-        color: #e0e0e0 !important;
+        background-color: #141414 !important;
+        border: 1px solid #262626 !important;
+        color: #E0E0E0 !important;
     }
-    .stAlert .stMarkdown {
-        color: #e0e0e0 !important;
+    
+    /* Custom border colors for specific alert statuses */
+    div[data-testid="stNotification"] {
+        border-radius: 8px !important;
     }
+    
     /* Buttons */
     .stButton button {
-        background-color: #00ff9d !important;
+        background-color: #00FF9D !important;
         color: #000000 !important;
         border: none;
-        border-radius: 8px;
-        padding: 8px 16px;
+        border-radius: 6px;
+        padding: 10px 20px;
         font-weight: bold;
+        transition: background-color 0.2s ease;
     }
     .stButton button:hover {
-        background-color: #00cc7a !important;
-        color: #000000;
+        background-color: #00CC7A !important;
+        color: #000000 !important;
+        box-shadow: 0 0 10px rgba(0,255,157,0.3);
     }
+    
     /* File uploader */
     .stFileUploader {
-        background-color: #1a1a1a !important;
-        border: 1px dashed #00ff9d !important;
+        background-color: #141414 !important;
+        border: 1px dashed #00FF9D !important;
         border-radius: 8px;
+        padding: 10px;
     }
+    
     /* Code blocks */
     code, pre {
-        background-color: #1e1e1e !important;
-        color: #00ff9d !important;
+        background-color: #141414 !important;
+        color: #00FF9D !important;
+        border: 1px solid #262626 !important;
         border-radius: 6px;
     }
+    
     /* Text input */
     .stTextInput input {
-        background-color: #1e1e1e !important;
-        color: #e0e0e0 !important;
-        border: 1px solid #00ff9d !important;
-        border-radius: 8px;
+        background-color: #141414 !important;
+        color: #E0E0E0 !important;
+        border: 1px solid #262626 !important;
+        border-radius: 6px;
     }
-    /* Success message */
-    .stSuccess {
-        background-color: #0a2a1a !important;
-        border-left-color: #00ff9d !important;
-        color: #e0e0e0 !important;
-    }
-    /* Error message */
-    .stError {
-        background-color: #2a1a1a !important;
-        border-left-color: #ff5555 !important;
-        color: #e0e0e0 !important;
-    }
-    /* Info message */
-    .stInfo {
-        background-color: #1a2a3a !important;
-        border-left-color: #3498db !important;
-        color: #e0e0e0 !important;
-    }
-    /* Captions and small text */
-    .stCaption, .stSmallText {
-        color: #a0a0a0 !important;
+    .stTextInput input:focus {
+        border-color: #00FF9D !important;
+        box-shadow: 0 0 5px rgba(0,255,157,0.2);
     }
 </style>
 """, unsafe_allow_html=True)
@@ -224,7 +228,6 @@ PROTOCOL_DETECTORS = [
     {"filter": "lldp", "name": "LLDP", "category": "IT", "fields": ["lldp.system_name", "lldp.system_description"]},
 ]
 
-# MAC OUI database (sample)
 OUI_DB = {
     "00:0C:29": "VMware", "00:50:56": "VMware", "00:1C:42": "Cisco",
     "00:0F:FE": "Huawei", "00:0F:9F": "Siemens", "00:1B:21": "Rockwell Automation",
@@ -292,8 +295,8 @@ def detect_ips_by_protocol_string(pcap_path):
                 continue
             parts = line.split('\t')
             if len(parts) >= 2:
-                ip = parts[0]
-                protocols = parts[1].lower()
+                ip = parts
+                protocols = parts.lower()
                 if any(kw in protocols for kw in keywords):
                     ips.add(ip)
     except:
@@ -302,27 +305,25 @@ def detect_ips_by_protocol_string(pcap_path):
 
 def extract_macs(pcap_path):
     ip_to_mac = {}
-    # ARP
     cmd = ["tshark", "-r", pcap_path, "-Y", "arp", "-T", "fields", "-e", "arp.src.proto_ipv4", "-e", "arp.src.hw_mac"]
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, check=False)
         for line in result.stdout.split('\n'):
             if line and '\t' in line:
                 parts = line.split('\t')
-                if len(parts) >= 2 and parts[0] and parts[1]:
-                    ip_to_mac[parts[0]] = parts[1]
+                if len(parts) >= 2 and parts and parts:
+                    ip_to_mac[parts] = parts
     except:
         pass
-    # Ethernet + IP
     cmd = ["tshark", "-r", pcap_path, "-T", "fields", "-e", "ip.src", "-e", "eth.src"]
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, check=False)
         for line in result.stdout.split('\n'):
             if line and '\t' in line:
                 parts = line.split('\t')
-                if len(parts) >= 2 and parts[0] and parts[1]:
-                    if parts[0] not in ip_to_mac:
-                        ip_to_mac[parts[0]] = parts[1]
+                if len(parts) >= 2 and parts and parts:
+                    if parts not in ip_to_mac:
+                        ip_to_mac[parts] = parts
     except:
         pass
     return ip_to_mac
@@ -338,7 +339,7 @@ def extract_assets(pcap_path, custom_decode_ports):
     if not candidate_ips:
         return ip_data
 
-    ports_to_decode = [5000, 5001, 5002, 5006, 5007, 5500, 6000, 9600, 10000, 20000, 34964]
+    ports_to_decode =
     if custom_decode_ports:
         ports_to_decode.extend(custom_decode_ports)
 
@@ -365,7 +366,6 @@ def extract_assets(pcap_path, custom_decode_ports):
             for i, field in enumerate(det["fields"]):
                 if i < len(parts) and parts[i] and field != "ip.src":
                     ip_data[ip]["metadata"][field.replace(".", "_")] = parts[i]
-    # Fallback
     for ip in candidate_ips:
         if not ip_data[ip]["protocols"]:
             ip_data[ip]["protocols"].add("Unknown (detected by port)")
@@ -398,6 +398,7 @@ def get_conversations(pcap_path):
     return conv
 
 def generate_vis_network(nodes_data, edges_data):
+    # Pure dark background applied to internal network canvas as well
     html = f"""
     <!DOCTYPE html>
     <html>
@@ -411,28 +412,29 @@ def generate_vis_network(nodes_data, edges_data):
                 padding: 0;
                 width: 100%;
                 height: 100%;
-                background-color: #0a0a0a;
+                background-color: #0A0A0A;
             }}
             .controls {{
                 position: absolute;
                 bottom: 20px;
                 right: 20px;
-                background: rgba(0,0,0,0.8);
-                padding: 8px 15px;
+                background: rgba(20, 20, 20, 0.85);
+                padding: 10px 15px;
                 border-radius: 8px;
-                color: #00ff9d;
+                color: #00FF9D;
                 font-size: 12px;
                 font-family: monospace;
                 z-index: 100;
                 backdrop-filter: blur(5px);
-                border-left: 3px solid #00ff9d;
+                border: 1px solid #262626;
+                border-left: 4px solid #00FF9D;
             }}
         </style>
     </head>
     <body>
         <div id="network"></div>
         <div class="controls">
-            🖱️ Drag nodes | 🔍 Scroll zoom | ⬜ Double‑click fullscreen | 🎨 OT=Red, IT=Blue, Unknown=Grey
+            🖱️ Drag nodes | 🔍 Scroll zoom | ⬜ Double‑click fullscreen | 🎨 OT=Red, IT=Cyan, Unknown=Grey
         </div>
         <script>
             var nodes = new vis.DataSet({json.dumps(nodes_data)});
@@ -441,28 +443,28 @@ def generate_vis_network(nodes_data, edges_data):
             var data = {{nodes: nodes, edges: edges}};
             var options = {{
                 nodes: {{
-                    font: {{color: 'white', size: 14, face: 'Arial'}},
+                    font: {{color: '#E0E0E0', size: 14, face: 'Segoe UI'}},
                     borderWidth: 2,
                     shadow: {{enabled: true, color: 'rgba(0,0,0,0.5)'}},
                     shape: 'dot',
-                    size: 25
+                    size: 20
                 }},
                 edges: {{
                     smooth: {{type: 'continuous', roundness: 0.5}},
-                    color: {{color: '#00ff9d', highlight: '#D3D3D3'}},
+                    color: {{color: '#262626', highlight: '#00FF9D'}},
                     width: 2,
                     arrows: {{to: {{enabled: false}}}}
                 }},
                 physics: {{
                     enabled: true,
                     solver: 'hierarchicalRepulsion',
-                    hierarchicalRepulsion: {{nodeDistance: 180, centralGravity: 0.3, springLength: 200}},
+                    hierarchicalRepulsion: {{nodeDistance: 160, centralGravity: 0.3, springLength: 180}},
                     stabilization: {{iterations: 300, fit: true}}
                 }},
                 layout: {{
                     hierarchical: {{
                         enabled: true,
-                        levelSeparation: 180,
+                        levelSeparation: 150,
                         nodeSpacing: 150,
                         direction: 'UD',
                         sortMethod: 'directed'
@@ -507,7 +509,7 @@ tshark -r your.pcap -T fields -e tcp.port | sort | uniq -c | sort -rn
         tmp.write(uploaded.getbuffer())
         pcap_path = tmp.name
 
-    st.info(f"📡 Analyzing {uploaded.name}... This may take a moment.")
+    st.success(f"📡 File '{uploaded.name}' prepared! Processing analysis...")
 
     custom_ports_input = st.text_input(
         "Optional: additional TCP ports to decode as OT protocols (comma separated)",
@@ -545,8 +547,6 @@ tshark -r your.pcap -T fields -e tcp.port | sort | uniq -c | sort -rn
         assets.append(asset)
 
     conversations = get_conversations(pcap_path)
-    # Use networkx only if needed (for potential future use, but not required for vis-network)
-    # We'll keep it for consistency
     G = nx.Graph()
     for a in assets:
         G.add_node(a["IP Address"])
@@ -558,9 +558,12 @@ tshark -r your.pcap -T fields -e tcp.port | sort | uniq -c | sort -rn
     nodes_vis = []
     for ip, data in ip_data.items():
         category = "OT" if "OT" in data["category"] else ("IT" if "IT" in data["category"] else "Unknown")
-        color = "#e74c3c" if category == "OT" else ("#3498db" if category == "IT" else "#95a5a6")
+        
+        # Coordinated Node colors that properly pop on dark background
+        color = "#FF3E3E" if category == "OT" else ("#00E5FF" if category == "IT" else "#7F8C8D")
         title = f"<b>{ip}</b><br>Type: {', '.join(data['protocols'])}<br>MAC: {ip_to_mac.get(ip, 'Unknown')}<br>Vendor: {get_vendor_from_mac(ip_to_mac.get(ip, ''))}"
         nodes_vis.append({"id": ip, "label": ip, "title": title, "color": color, "category": category})
+        
     edges_vis = []
     for (src, dst), cnt in conversations.items():
         if src in ip_set and dst in ip_set:
@@ -575,6 +578,8 @@ tshark -r your.pcap -T fields -e tcp.port | sort | uniq -c | sort -rn
             st.dataframe(df, use_container_width=True)
             csv = df.to_csv(index=False).encode('utf-8')
             st.download_button("⬇️ Download Asset Inventory (CSV)", csv, "ot_it_assets.csv", "text/csv")
+            
+            st.markdown("<br>", unsafe_allow_html=True)
             col1, col2, col3 = st.columns(3)
             col1.metric("Total Assets", len(assets))
             col2.metric("OT Assets", sum(1 for a in assets if "OT" in a["Category"]))
@@ -584,7 +589,7 @@ tshark -r your.pcap -T fields -e tcp.port | sort | uniq -c | sort -rn
 
     with tab2:
         if nodes_vis and edges_vis:
-            st.success(f"✅ Visualizing {len(nodes_vis)} assets and {len(edges_vis)} communication links")
+            st.success(f"Visualizing {len(nodes_vis)} assets and {len(edges_vis)} communication links")
             html_graph = generate_vis_network(nodes_vis, edges_vis)
             st.components.v1.html(html_graph, height=700, scrolling=False)
             st.caption("💡 Tip: Drag nodes to reorganise | Scroll to zoom | Double‑click for full‑screen")
